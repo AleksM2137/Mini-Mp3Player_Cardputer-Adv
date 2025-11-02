@@ -11,7 +11,7 @@ M5Canvas spr(&M5Cardputer.Display);
 
 #define KEY_ESC 27
 #define KEY_DEL 127
-#define KEY_ENTER 13
+#define KEY_ENTER 59
 #define KEY_UP    0x80
 #define KEY_DOWN  0x81
 
@@ -26,6 +26,7 @@ unsigned short gray;
 unsigned short light;
 
 static int selectedFolderIndex = 0;
+static int folderConfirmIndex = 0;
 static ESP32Time rtc(0);
 
 void initUI() {
@@ -88,6 +89,25 @@ void drawFolderSelect() {
         sprite.drawString(displayName.substring(0, 28), 10, startY + i * lineHeight);
     }
     
+    sprite.pushSprite(0, 0);
+}
+
+void drawFolderConfirm() {
+    gray = grays[15];
+    light = grays[11];
+
+    sprite.fillRect(0, 0, 240, 135, gray);
+    sprite.setTextFont(0);
+    sprite.setTextDatum(4);
+    sprite.setTextColor(RED, gray);
+    sprite.drawString("USE THIS FOLDER?", 120, 20);
+
+    sprite.setTextDatum(0);
+    sprite.setTextColor(GREEN, gray);
+    sprite.drawString("Folder: " + availableFolders[folderConfirmIndex], 10, 60);
+    sprite.drawString("ENTER - Yes", 10, 100);
+    sprite.drawString("ESC - Back", 10, 112);
+
     sprite.pushSprite(0, 0);
 }
 
@@ -241,12 +261,14 @@ void drawPlayer() {
 }
 
 void draw() {
-    if (currentUIState == UI_FOLDER_SELECT) {
-        drawFolderSelect();
-    } else {
-        drawPlayer();
+        if (currentUIState == UI_FOLDER_SELECT) {
+            drawFolderSelect();
+        } else if (currentUIState == UI_FOLDER_CONFIRM) {
+            drawFolderConfirm();
+        } else {
+            drawPlayer();
+        }
     }
-}
 
 void handleKeyPress(char key) {
     if (currentUIState == UI_FOLDER_SELECT) {
@@ -257,13 +279,22 @@ void handleKeyPress(char key) {
             selectedFolderIndex++;
             if (selectedFolderIndex >= folderCount) selectedFolderIndex = 0;
         } else if (key == KEY_ENTER) {
-            listAudioFiles(availableFolders[selectedFolderIndex]);
+            folderConfirmIndex = selectedFolderIndex;
+            currentUIState = UI_FOLDER_CONFIRM;
+        }
+    }
+    else if (currentUIState == UI_FOLDER_CONFIRM) {
+        if (key == KEY_ENTER) {
+            listAudioFiles(availableFolders[folderConfirmIndex]);
             currentFileIndex = 0;
             currentUIState = UI_PLAYER;
             textPos = 90;
             rtc.setTime(0, 0, 0, 17, 1, 2021);
+        } else if (key == KEY_ESC || key == KEY_DEL) {
+            currentUIState = UI_FOLDER_SELECT;
         }
-    } else {
+    } 
+    else {
         if (key == KEY_ESC || key == KEY_DEL) {
             audio.stopSong();
             isPlaying = false;

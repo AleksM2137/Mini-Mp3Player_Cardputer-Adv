@@ -34,7 +34,6 @@ void scanAvailableFolders() {
     while (file && folderCount < 20) {
         if (file.isDirectory()) {
             String dirname = String(file.name());
-            // Убедимся что путь начинается с /
             if (!dirname.startsWith("/")) {
                 dirname = "/" + dirname;
             }

@@ -6,6 +6,7 @@
 
 enum UIState {
     UI_FOLDER_SELECT,
+    UI_FOLDER_CONFIRM,
     UI_PLAYER
 };
 
