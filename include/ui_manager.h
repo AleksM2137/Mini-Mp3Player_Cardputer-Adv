@@ -25,8 +25,8 @@ extern uint8_t g[14];
 extern unsigned short grays[18];
 extern unsigned short gray;
 extern unsigned short light;
-extern unsigned long trackStartMillis = 0;
-extern unsigned long playbackTime = 0; 
+extern unsigned long trackStartMillis;
+extern unsigned long playbackTime; 
 
 void initUI();
 void draw();
