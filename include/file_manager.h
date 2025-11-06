@@ -10,24 +10,25 @@
 #define SD_MOSI 14
 #define SD_CS 12
 
-#define MAX_FILES 250 
+#define MAX_FILES 100
 
 extern String audioFiles[MAX_FILES];
-extern int fileCount;
-extern int currentFileIndex;
+extern uint8_t fileCount;
+extern uint8_t currentFileIndex;
 extern String currentFolder;
 
 extern String availableFolders[];
-extern int folderCount;
+extern uint8_t folderCount;
 
 extern bool isScanning;
 extern bool isScanningFiles;
-extern unsigned short int scanProgress;
-extern unsigned short int scanTotal;
+extern uint8_t scanProgress;
+extern uint8_t scanTotal;
+
+extern SemaphoreHandle_t sdMutex;
 
 bool initSDCard();
-void scanFolders(const String& folder);
-void listAudioFiles(const String& folder);
-String getFileName(int index);
+void scanDirectory(const String& folder);
+String getFileName(uint8_t index);
 
 #endif

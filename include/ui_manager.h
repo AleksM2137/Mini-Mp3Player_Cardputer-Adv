@@ -10,8 +10,9 @@ enum UIState {
 };
 
 extern UIState currentUIState;
-extern M5Canvas sprite;
-extern M5Canvas spr;
+extern M5Canvas sprite1;
+extern M5Canvas sprite2;
+extern M5Canvas overlaySprite;
 
 extern bool nextTrackRequest;
 
@@ -23,7 +24,7 @@ extern unsigned short grays[18];
 extern unsigned short gray;
 extern unsigned short light;
 extern unsigned long trackStartMillis;
-extern unsigned long playbackTime; 
+extern unsigned long playbackTime;
 
 void initUI();
 void draw();

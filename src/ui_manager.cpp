@@ -4,8 +4,9 @@
 #include "audio_config.h"
 
 UIState currentUIState = UI_FOLDER_SELECT;
-M5Canvas sprite(&M5Cardputer.Display);
-M5Canvas spr(&M5Cardputer.Display);
+M5Canvas sprite1(&M5Cardputer.Display);
+M5Canvas sprite2(&M5Cardputer.Display);
+M5Canvas overlaySprite(&M5Cardputer.Display);
 
 bool nextTrackRequest = false;
 
@@ -24,17 +25,17 @@ unsigned long playbackTime = 0;
 
 static uint8_t volumeStep = 4;
 static uint8_t brightnessStep = 64;
-static short int selectedFolderIndex = 0;
-static short int selectedFileIndex = 0;
+static uint8_t selectedFolderIndex = 0;
+static uint8_t selectedFileIndex = 0;
 
 void initUI() {
     M5Cardputer.Display.setRotation(1);
     M5Cardputer.Display.setBrightness(brightnessStep*2);
-    sprite.createSprite(240, 135);
-    spr.createSprite(86, 16);
+    sprite1.createSprite(240, 135);
+    sprite2.createSprite(86, 16);
 
-    int co = 214;
-    for (int i = 0; i < 18; i++) {
+    uint8_t co = 214;
+    for (uint8_t i = 0; i < 18; i++) {
         grays[i] = M5Cardputer.Display.color565(co, co, co + 40);
         co = co - 13;
     }
@@ -83,31 +84,31 @@ void drawFolderSelect() {
     gray = grays[15];
     light = grays[10];
 
-    sprite.fillRect(0, 0, 240, 135, gray);
-    sprite.drawRoundRect(0, 0, 240, 135, 4, light);
+    sprite1.fillRect(0, 0, 240, 135, gray);
+    sprite1.drawRoundRect(0, 0, 240, 135, 4, light);
 
-    sprite.setTextFont(1);
-    sprite.setTextColor(ORANGE, gray);
-    sprite.setTextDatum(4);
-    sprite.drawString("Select Folder", 75, 10);
+    sprite1.setTextFont(1);
+    sprite1.setTextColor(ORANGE, gray);
+    sprite1.setTextDatum(4);
+    sprite1.drawString("Select Folder", 75, 10);
 
-    sprite.fillRoundRect(10, 22, 220, 20, 4, grays[12]);
-    sprite.setTextFont(1);
-    sprite.setTextColor(WHITE, grays[12]);
-    sprite.setTextDatum(0);
-    sprite.drawString(currentFolder, 16, 27);
+    sprite1.fillRoundRect(10, 22, 220, 20, 4, grays[12]);
+    sprite1.setTextFont(1);
+    sprite1.setTextColor(WHITE, grays[12]);
+    sprite1.setTextDatum(0);
+    sprite1.drawString(currentFolder, 16, 27);
 
-    sprite.setTextFont(0);
-    sprite.setTextColor(GREEN, gray);
-    sprite.setTextDatum(2);
-    sprite.drawString("[Audios: " + String(fileCount) + "]", 230, 12);
+    sprite1.setTextFont(0);
+    sprite1.setTextColor(GREEN, gray);
+    sprite1.setTextDatum(2);
+    sprite1.drawString("[Audios: " + String(fileCount) + "]", 230, 12);
 
-    sprite.setTextFont(0);
-    sprite.setTextDatum(0);
-    sprite.setTextColor(grays[5], gray);
-    sprite.drawString("[;]/[.]-Nav   [ok]-Open   [Esc]-Back", 10, 122);
+    sprite1.setTextFont(0);
+    sprite1.setTextDatum(0);
+    sprite1.setTextColor(grays[5], gray);
+    sprite1.drawString("[;]/[.]-Nav   [ok]-Open   [Esc]-Back", 10, 122);
 
-    sprite.setTextFont(1);
+    sprite1.setTextFont(1);
 
     const int startY = 48;
     const int lineHeight = 14;
@@ -153,69 +154,69 @@ void drawFolderSelect() {
         uint16_t fg = isSelected ? WHITE : (isConfirmButton ? RED : GREEN);
 
         if (isSelected)
-            sprite.fillRoundRect(8, y - 1, 224, lineHeight + 2, 3, bg);
-        sprite.setTextColor(fg, bg);
+            sprite1.fillRoundRect(8, y - 1, 224, lineHeight + 2, 3, bg);
+        sprite1.setTextColor(fg, bg);
 
-        sprite.drawString(displayName, 14, y + 1);
+        sprite1.drawString(displayName, 14, y + 1);
         y += lineHeight;
     }
 
-    sprite.pushSprite(0, 0);
+    sprite1.pushSprite(0, 0);
 }
 
 void drawPlayer() {
     if (graphSpeed == 0) {
         gray = grays[15];
         light = grays[11];
-        sprite.fillRect(0, 0, 240, 135, gray);
-        sprite.fillRect(4, 8, 130, 122, BLACK);
-        sprite.fillRect(129, 8, 5, 122, 0x0841);
+        sprite1.fillRect(0, 0, 240, 135, gray);
+        sprite1.fillRect(4, 8, 130, 122, BLACK);
+        sprite1.fillRect(129, 8, 5, 122, 0x0841);
 
         if (fileCount > 0) {
             sliderPos = map(currentFileIndex, 0, max(1, fileCount - 1), 8, 110);
         } else {
             sliderPos = 8;
         }
-        sprite.fillRect(129, sliderPos, 5, 20, grays[2]);
-        sprite.fillRect(131, sliderPos + 4, 1, 12, grays[16]);
+        sprite1.fillRect(129, sliderPos, 5, 20, grays[2]);
+        sprite1.fillRect(131, sliderPos + 4, 1, 12, grays[16]);
 
-        sprite.fillRect(4, 2, 50, 2, ORANGE);
-        sprite.fillRect(84, 2, 50, 2, ORANGE);
-        sprite.fillRect(190, 2, 45, 2, ORANGE);
-        sprite.fillRect(190, 6, 45, 3, grays[4]);
+        sprite1.fillRect(4, 2, 50, 2, ORANGE);
+        sprite1.fillRect(84, 2, 50, 2, ORANGE);
+        sprite1.fillRect(190, 2, 45, 2, ORANGE);
+        sprite1.fillRect(190, 6, 45, 3, grays[4]);
         
-        sprite.drawFastVLine(3, 9, 120, light);
-        sprite.drawFastVLine(134, 9, 120, light);
-        sprite.drawFastHLine(3, 129, 130, light);
-        sprite.drawFastHLine(0, 0, 240, light);
-        sprite.drawFastHLine(0, 134, 240, light);
+        sprite1.drawFastVLine(3, 9, 120, light);
+        sprite1.drawFastVLine(134, 9, 120, light);
+        sprite1.drawFastHLine(3, 129, 130, light);
+        sprite1.drawFastHLine(0, 0, 240, light);
+        sprite1.drawFastHLine(0, 134, 240, light);
         
-        sprite.fillRect(139, 0, 3, 135, BLACK);
-        sprite.fillRect(148, 14, 86, 42, BLACK);
-        sprite.fillRect(148, 59, 86, 16, BLACK);
+        sprite1.fillRect(139, 0, 3, 135, BLACK);
+        sprite1.fillRect(148, 14, 86, 42, BLACK);
+        sprite1.fillRect(148, 59, 86, 16, BLACK);
 
-        sprite.fillTriangle(162, 18, 162, 26, 168, 22, GREEN);
-        sprite.fillRect(162, 30, 6, 6, RED);
+        sprite1.fillTriangle(162, 18, 162, 26, 168, 22, GREEN);
+        sprite1.fillRect(162, 30, 6, 6, RED);
         
-        sprite.drawFastVLine(143, 0, 135, light);
-        sprite.drawFastVLine(238, 0, 135, light);
-        sprite.drawFastVLine(138, 0, 135, light);
-        sprite.drawFastVLine(148, 14, 42, light);
-        sprite.drawFastHLine(148, 14, 86, light);
+        sprite1.drawFastVLine(143, 0, 135, light);
+        sprite1.drawFastVLine(238, 0, 135, light);
+        sprite1.drawFastVLine(138, 0, 135, light);
+        sprite1.drawFastVLine(148, 14, 42, light);
+        sprite1.drawFastHLine(148, 14, 86, light);
 
         for (int i = 0; i < 4; i++)
-            sprite.fillRoundRect(148 + (i * 22), 94, 18, 18, 3, grays[4]);
+            sprite1.fillRoundRect(148 + (i * 22), 94, 18, 18, 3, grays[4]);
 
-        sprite.fillRect(220, 104, 8, 2, grays[13]);
-        sprite.fillRect(220, 108, 8, 2, grays[13]);
-        sprite.fillTriangle(228, 102, 228, 106, 231, 105, grays[13]);
-        sprite.fillTriangle(220, 106, 220, 110, 217, 109, grays[13]);
+        sprite1.fillRect(220, 104, 8, 2, grays[13]);
+        sprite1.fillRect(220, 108, 8, 2, grays[13]);
+        sprite1.fillTriangle(228, 102, 228, 106, 231, 105, grays[13]);
+        sprite1.fillTriangle(220, 106, 220, 110, 217, 109, grays[13]);
         
         if (!isStoped) {
-            sprite.fillRect(152, 104, 3, 6, grays[13]);
-            sprite.fillRect(157, 104, 3, 6, grays[13]);
+            sprite1.fillRect(152, 104, 3, 6, grays[13]);
+            sprite1.fillRect(157, 104, 3, 6, grays[13]);
         } else {
-            sprite.fillTriangle(156, 102, 156, 110, 160, 106, grays[13]);
+            sprite1.fillTriangle(156, 102, 156, 110, 160, 106, grays[13]);
         }
 
         const int32_t volBarX = 172;
@@ -223,181 +224,107 @@ void drawPlayer() {
         const int32_t volBarWidth = 60;
         const int32_t volSliderWidth = 10;
         
-        sprite.fillRoundRect(volBarX, volBarY, volBarWidth, 3, 2, YELLOW);
+        sprite1.fillRoundRect(volBarX, volBarY, volBarWidth, 3, 2, YELLOW);
 
         int volSliderX = volBarX + map(volume, 0, 21, 0, volBarWidth - volSliderWidth);
-        sprite.fillRoundRect(volSliderX, volBarY - 2, volSliderWidth, 8, 2, grays[2]);
-        sprite.fillRoundRect(volSliderX + 2, volBarY, 6, 4, 2, grays[10]);
+        sprite1.fillRoundRect(volSliderX, volBarY - 2, volSliderWidth, 8, 2, grays[2]);
+        sprite1.fillRoundRect(volSliderX + 2, volBarY, 6, 4, 2, grays[10]);
 
         const int32_t brigBarX = 172;
         const int32_t brigBarY = 124;
         const int32_t brigBarWidth = 30;
         const int32_t brigSliderWidth = 10;
         
-        sprite.fillRoundRect(brigBarX, brigBarY, brigBarWidth, 3, 2, MAGENTA);
+        sprite1.fillRoundRect(brigBarX, brigBarY, brigBarWidth, 3, 2, MAGENTA);
 
         int32_t brigSliderX = brigBarX + map(M5Cardputer.Display.getBrightness(), 0, 255, 0, brigBarWidth - brigSliderWidth);
-        sprite.fillRoundRect(brigSliderX, brigBarY - 2, brigSliderWidth, 8, 2, grays[2]);
-        sprite.fillRoundRect(brigSliderX + 2, brigBarY, 6, 4, 2, grays[10]);
+        sprite1.fillRoundRect(brigSliderX, brigBarY - 2, brigSliderWidth, 8, 2, grays[2]);
+        sprite1.fillRoundRect(brigSliderX + 2, brigBarY, 6, 4, 2, grays[10]);
 
-        sprite.drawRect(206, 119, 28, 12, GREEN);
-        sprite.fillRect(234, 122, 3, 6, GREEN);
+        sprite1.drawRect(206, 119, 28, 12, GREEN);
+        sprite1.fillRect(234, 122, 3, 6, GREEN);
 
         for (int i = 0; i < 14; i++) {
             if (!isStoped)
                 g[i] = random(1, 5);
             for (int j = 0; j < g[i]; j++)
-                sprite.fillRect(172 + (i * 4), 50 - j * 3, 3, 2, grays[4]);
+                sprite1.fillRect(172 + (i * 4), 50 - j * 3, 3, 2, grays[4]);
         }
 
-        sprite.setTextFont(0);
-        sprite.setTextDatum(0);
+        sprite1.setTextFont(0);
+        sprite1.setTextDatum(0);
         
         if (fileCount == 0) {
-            sprite.setTextColor(RED, BLACK);
-            sprite.drawString("No files found!", 8, 50);
+            sprite1.setTextColor(RED, BLACK);
+            sprite1.drawString("No files found!", 8, 50);
         } else {
             int startIdx = max(0, currentFileIndex - 5);
             for (int i = 0; i < 10 && (startIdx + i) < fileCount; i++) {
                 int idx = startIdx + i;
                 if (idx == currentFileIndex) {
-                    sprite.setTextColor(WHITE, BLACK);
+                    sprite1.setTextColor(WHITE, BLACK);
                 } else {
-                    sprite.setTextColor(GREEN, BLACK);
+                    sprite1.setTextColor(GREEN, BLACK);
                 }
-                sprite.drawString(getFileName(idx).substring(0, 20), 8, 10 + (i * 12));
+                sprite1.drawString(getFileName(idx).substring(0, 20), 8, 10 + (i * 12));
             }
         }
 
-        sprite.setTextColor(grays[1], gray);
-        sprite.drawString("MP3 Adv", 150, 4);
-        sprite.setTextColor(grays[2], gray);
-        sprite.drawString("LIST", 58, 0);
-        sprite.setTextColor(grays[4], gray);
-        sprite.drawString("VOL", 150, 80);
-        sprite.setTextColor(grays[4], gray);
-        sprite.drawString("LIG", 150, 122);
+        sprite1.setTextColor(grays[1], gray);
+        sprite1.drawString("MP3 Adv", 150, 4);
+        sprite1.setTextColor(grays[2], gray);
+        sprite1.drawString("LIST", 58, 0);
+        sprite1.setTextColor(grays[4], gray);
+        sprite1.drawString("VOL", 150, 80);
+        sprite1.setTextColor(grays[4], gray);
+        sprite1.drawString("LIG", 150, 122);
 
         if (isPlaying) {
-            sprite.setTextColor(grays[8], BLACK);
-            sprite.drawString("P", 152, 18);
-            sprite.drawString("L", 152, 27);
-            sprite.drawString("A", 152, 36);
-            sprite.drawString("Y", 152, 45);
+            sprite1.setTextColor(grays[8], BLACK);
+            sprite1.drawString("P", 152, 18);
+            sprite1.drawString("L", 152, 27);
+            sprite1.drawString("A", 152, 36);
+            sprite1.drawString("Y", 152, 45);
         } else {
-            sprite.setTextColor(grays[8], BLACK);
-            sprite.drawString("S", 152, 18);
-            sprite.drawString("T", 152, 27);
-            sprite.drawString("O", 152, 36);
-            sprite.drawString("P", 152, 45);
+            sprite1.setTextColor(grays[8], BLACK);
+            sprite1.drawString("S", 152, 18);
+            sprite1.drawString("T", 152, 27);
+            sprite1.drawString("O", 152, 36);
+            sprite1.drawString("P", 152, 45);
         }
 
-        sprite.setTextColor(GREEN, BLACK);
-        sprite.setFont(&DSEG7_Classic_Mini_Regular_16);
+        sprite1.setTextColor(GREEN, BLACK);
+        sprite1.setFont(&DSEG7_Classic_Mini_Regular_16);
         if (!isStoped)
-            sprite.drawString(getPlaybackTimeString(), 172, 18);
-        sprite.setTextFont(0);
+            sprite1.drawString(getPlaybackTimeString(), 172, 18);
+        sprite1.setTextFont(0);
 
-        sprite.setTextDatum(3);
-        sprite.drawString(String(M5Cardputer.Power.getBatteryLevel()) + "%", 220, 121);
+        sprite1.setTextDatum(3);
+        sprite1.drawString(String(M5Cardputer.Power.getBatteryLevel()) + "%", 220, 121);
 
-        sprite.setTextColor(BLACK, grays[4]);
-        sprite.drawString("B", 220, 96);
-        sprite.drawString("N", 198, 96);
-        sprite.drawString("P", 176, 96);
-        sprite.drawString("A", 154, 96);
-        sprite.setTextColor(BLACK, grays[5]);
-        sprite.drawString(">>", 202, 103);
-        sprite.drawString("<<", 180, 103);
+        sprite1.setTextColor(BLACK, grays[4]);
+        sprite1.drawString("R", 220, 96);
+        sprite1.drawString("N", 198, 96);
+        sprite1.drawString("P", 176, 96);
+        sprite1.drawString("A", 154, 96);
+        sprite1.setTextColor(BLACK, grays[5]);
+        sprite1.drawString(">>", 202, 103);
+        sprite1.drawString("<<", 180, 103);
 
-        spr.fillSprite(BLACK);
-        spr.setTextColor(GREEN, BLACK);
+        sprite2.fillSprite(BLACK);
+        sprite2.setTextColor(GREEN, BLACK);
         if (!isStoped && fileCount > 0) {
-            spr.drawString(getFileName(currentFileIndex), textPos, 4);
+            sprite2.drawString(getFileName(currentFileIndex), textPos, 4);
         }
         textPos -= 2;
         if (textPos < -300) textPos = 90;
         
-        spr.pushSprite(&sprite, 148, 59);
-        sprite.pushSprite(0, 0);
+        sprite2.pushSprite(&sprite1, 148, 59);
+        sprite1.pushSprite(0, 0);
     }
     
     graphSpeed++;
     if (graphSpeed == 4) graphSpeed = 0;
-}
-
-void drawScanOverlay() {
-    const int boxX = 20;
-    const int boxY = 20;
-    const int boxW = 200;
-    const int boxH = 95;
-    
-    sprite.fillRoundRect(boxX, boxY, boxW, boxH, 8, BLACK);
-    sprite.drawRoundRect(boxX, boxY, boxW, boxH, 8, YELLOW);
-
-    sprite.setTextColor(WHITE, BLACK);
-    sprite.setTextFont(1);
-    sprite.setTextDatum(4);
-
-    if (isScanningFiles) {
-        sprite.drawString("Scanning files...", boxX + boxW/2, boxY + 12);
-    } else {
-        sprite.drawString("Scanning folders...", boxX + boxW/2, boxY + 12);
-    }
-
-    int barWidth = map(scanProgress, 0, max<unsigned short int>(1, scanTotal), 0, boxW - 40);
-    sprite.setTextFont(0);
-    sprite.setTextDatum(0);
-    sprite.setTextColor(CYAN, BLACK);
-    
-    if (isScanningFiles) {
-        sprite.drawString("Files:", boxX + 10, boxY + 28);
-    } else {
-        sprite.drawString("Folders:", boxX + 10, boxY + 28);
-    }
-    
-    sprite.drawRoundRect(boxX + 10, boxY + 38, boxW - 20, 8, 2, grays[8]);
-    sprite.fillRoundRect(boxX + 10, boxY + 38, barWidth, 8, 2, GREEN);
-
-    sprite.setTextDatum(2);
-    sprite.setTextColor(WHITE, BLACK);
-    sprite.drawString(String(scanProgress) + "/" + String(scanTotal), boxX + boxW - 10, boxY + 28);
-
-    uint32_t freeHeap = ESP.getFreeHeap();
-    uint32_t totalHeap = ESP.getHeapSize();
-    uint32_t usedHeap = totalHeap - freeHeap;
-
-    int sramBarWidth = map(usedHeap, 0, totalHeap, 0, boxW - 20);
-    sprite.setTextDatum(0);
-    sprite.setTextColor(ORANGE, BLACK);
-    sprite.drawString("SRAM:", boxX + 10, boxY + 52);
-    sprite.drawRoundRect(boxX + 10, boxY + 62, boxW - 20, 8, 2, grays[8]);
-    sprite.fillRoundRect(boxX + 10, boxY + 62, sramBarWidth, 8, 2, (usedHeap > totalHeap * 0.9) ? RED : BLUE);
-    
-    sprite.setTextDatum(2);
-    sprite.setTextColor(WHITE, BLACK);
-    sprite.drawString(String(freeHeap/1024) + "KB", boxX + boxW - 10, boxY + 52);
-
-    if (psramFound()) {
-        uint32_t freePsram = ESP.getFreePsram();
-        uint32_t totalPsram = ESP.getPsramSize();
-        uint32_t usedPsram = totalPsram - freePsram;
-        
-        int psramBarWidth = map(usedPsram, 0, totalPsram, 0, boxW - 20);
-        sprite.setTextDatum(0);
-        sprite.setTextColor(MAGENTA, BLACK);
-        sprite.drawString("PSRAM:", boxX + 10, boxY + 76);
-        sprite.drawRoundRect(boxX + 10, boxY + 86, boxW - 20, 8, 2, grays[8]);
-        sprite.fillRoundRect(boxX + 10, boxY + 86, psramBarWidth, 8, 2, (usedPsram > totalPsram * 0.9) ? RED : PURPLE);
-        
-        sprite.setTextDatum(2);
-        sprite.setTextColor(WHITE, BLACK);
-        sprite.drawString(String(freePsram/1024) + "KB", boxX + boxW - 10, boxY + 76);
-    } else {
-        sprite.setTextDatum(4);
-        sprite.setTextColor(grays[6], BLACK);
-        sprite.drawString("PSRAM: N/A", boxX + boxW/2, boxY + 82);
-    }
 }
 
 void draw() {
@@ -406,12 +333,6 @@ void draw() {
     } else {
         drawPlayer();
     }
-
-    if (isScanning || isScanningFiles) {
-        drawScanOverlay();
-    }
-    
-    sprite.pushSprite(0, 0);
 }
 
 void handleKeyPress(char key) {
@@ -442,7 +363,7 @@ void handleKeyPress(char key) {
             if (selectedFolderIndex >= totalItems) selectedFolderIndex = 0;
         } else if (key == '\n') {
             if (selectedFolderIndex == confirmButtonIndex) {
-                listAudioFiles(currentFolder);
+                scanDirectory(currentFolder);
                 currentFileIndex = 0;
                 currentUIState = UI_PLAYER;
                 isPlaying = true;
@@ -454,16 +375,14 @@ void handleKeyPress(char key) {
             else if (hasParent && selectedFolderIndex == 0) {
                 int lastSlash = currentFolder.lastIndexOf('/');
                 currentFolder = (lastSlash > 0) ? currentFolder.substring(0, lastSlash) : "/";
-                scanFolders(currentFolder);
-                listAudioFiles(currentFolder);
+                scanDirectory(currentFolder);
                 selectedFolderIndex = 0;
             }
             else {
                 int folderIndex = selectedFolderIndex - baseParent;
                 if (folderIndex >= 0 && folderIndex < folderCount) {
                     currentFolder = availableFolders[folderIndex];
-                    scanFolders(currentFolder);
-                    listAudioFiles(currentFolder);
+                    scanDirectory(currentFolder);
                     selectedFolderIndex = 0;
                 }
             }
@@ -471,8 +390,7 @@ void handleKeyPress(char key) {
             if (currentFolder != "/") {
                 int lastSlash = currentFolder.lastIndexOf('/');
                 currentFolder = (lastSlash > 0) ? currentFolder.substring(0, lastSlash) : "/";
-                scanFolders(currentFolder);
-                listAudioFiles(currentFolder);
+                scanDirectory(currentFolder);
                 selectedFolderIndex = 0;
             }
         }
@@ -485,8 +403,7 @@ void handleKeyPress(char key) {
             isStoped = true;
             currentUIState = UI_FOLDER_SELECT;
             selectedFolderIndex = 0;
-            scanFolders("/");
-            listAudioFiles("/");
+            scanDirectory("/");
         } else if (key == 'a' || key == ' ') {
             if (isPlaying && !isStoped) {
                 playbackTime = millis() - trackStartMillis;

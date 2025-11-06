@@ -1,17 +1,18 @@
 #include "file_manager.h"
 
+SemaphoreHandle_t sdMutex = NULL;
+
 String audioFiles[MAX_FILES];
-int fileCount = 0;
-int currentFileIndex = 0;
+uint8_t fileCount = 0;
+uint8_t currentFileIndex = 0;
 String currentFolder = "/";
 
 String availableFolders[20];
-int folderCount = 0;
+uint8_t folderCount = 0;
 
-bool isScanning = false;
 bool isScanningFiles = false;
-unsigned short int scanProgress = 0;
-unsigned short int scanTotal = 0;
+uint8_t scanProgress = 0;
+uint8_t scanTotal = 0;
 
 bool initSDCard() {
     SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
@@ -27,190 +28,93 @@ bool initSDCard() {
         cardType == CARD_SD ? "SDSC" :
         cardType == CARD_SDHC ? "SDHC" : "UNKNOWN");
     Serial.printf("SD Card Size: %lluMB\n", SD.cardSize() / (1024 * 1024));
-
-    Serial.printf("Free Heap: %d bytes\n", ESP.getFreeHeap());
-    if (psramFound()) {
-        Serial.printf("PSRAM available: %d bytes\n", ESP.getFreePsram());
-    } else {
-        Serial.println("PSRAM not found");
-    }
     
     return true;
 }
 
-void scanFolders(const String& folder) {
+void scanDirectory(const String& folder) {
+    fileCount = 0;
     folderCount = 0;
     scanProgress = 0;
     scanTotal = 0;
-    isScanning = true;
-
-    Serial.printf("\n=== Scanning folders in: %s ===\n", folder.c_str());
+    currentFolder = folder;
+    
+    Serial.printf("Scanning directory: %s\n", folder.c_str());
 
     File root = SD.open(folder);
     if (!root || !root.isDirectory()) {
-        Serial.println("ERROR: Failed to open folder");
-        isScanning = false;
         return;
     }
 
-    for (File f = root.openNextFile(); f; f = root.openNextFile()) {
-        if (f.isDirectory()) {
-            scanTotal++;
-        }
-        f.close();
-        delay(1);
-    }
-    root.rewindDirectory();
-
-    Serial.printf("Found %d folders to scan\n", scanTotal);
-
-    for (File f = root.openNextFile(); f; f = root.openNextFile()) {
-        if (f.isDirectory() && folderCount < 20) {
-            String dirname = String(f.name());
-            if (!dirname.startsWith("/")) {
-                dirname = (folder == "/") ? "/" + dirname : folder + "/" + dirname;
-            }
-            availableFolders[folderCount++] = dirname;
-            scanProgress++;
-            Serial.printf("  [%d/%d] %s\n", scanProgress, scanTotal, dirname.c_str());
-            delay(5);
-        }
-        f.close();
-    }
-
-    root.close();
-    isScanning = false;  // Выключаем флаг
-    
-    Serial.printf("=== Scan complete: %d folders found ===\n", folderCount);
-    Serial.printf("Free Heap after scan: %d bytes\n\n", ESP.getFreeHeap());
-}
-
-void listAudioFiles(const String& folder) {
-    fileCount = 0;
-    scanProgress = 0;
-    scanTotal = 0;
-    isScanningFiles = true;
-    currentFolder = folder;
-    
-    Serial.printf("\n=== Listing audio files in: %s ===\n", folder.c_str());
-    Serial.printf("MAX_FILES limit: %d\n", MAX_FILES);
-    Serial.printf("Free Heap before listing: %d bytes\n", ESP.getFreeHeap());
-    
-    File root = SD.open(folder);
-    if (!root) {
-        Serial.println("ERROR: Failed to open folder");
-        isScanningFiles = false;
-        return;
-    }
-    
-    if (!root.isDirectory()) {
-        Serial.println("ERROR: Not a directory");
-        root.close();
-        isScanningFiles = false;
-        return;
-    }
-
-    File file = root.openNextFile();
-    while (file) {
-        if (!file.isDirectory()) {
-            String fname = String(file.name());
-            String lower = fname;
-            lower.toLowerCase();
-            int dot = lower.lastIndexOf('.');
-            
+    File f = root.openNextFile();
+    while (f && scanTotal < 255) {
+        if (!f.isDirectory()) {
+            String fname = String(f.name());
+            fname.toLowerCase();
+            int8_t dot = fname.lastIndexOf('.');
             if (dot >= 0) {
-                String ext = lower.substring(dot + 1);
-                if (ext == "mp3" || ext == "wav") {
-                    scanTotal++;
-                }
+                String ext = fname.substring(dot + 1);
+                if (ext == "mp3" || ext == "wav") scanTotal++;
             }
         }
-        file.close();
-        file = root.openNextFile();
-        delay(1);
+        f.close();
+        f = root.openNextFile();
+        vTaskDelay(5 / portTICK_PERIOD_MS);
     }
-    
     root.close();
+    
+    Serial.printf("Found %d audio files to process\n", scanTotal);
+
     root = SD.open(folder);
+    f = root.openNextFile();
     
-    Serial.printf("Found %d audio files\n", scanTotal);
+    while (f) {
+        String fname = String(f.name());
 
-    file = root.openNextFile();
-    while (file && fileCount < MAX_FILES) {
-        if (!file.isDirectory()) {
-            String fname = String(file.name());
-
-            if (!fname.startsWith("/")) {
-                if (folder == "/") {
-                    fname = "/" + fname;
-                } else {
-                    fname = folder + "/" + fname;
+        if (f.isDirectory()) {
+            if (folderCount < 20) {
+                if (!fname.startsWith("/")) {
+                    fname = (folder == "/") ? "/" + fname : folder + "/" + fname;
                 }
+                availableFolders[folderCount++] = fname;
             }
-
+        } else {
+            if (!fname.startsWith("/")) {
+                fname = (folder == "/") ? "/" + fname : folder + "/" + fname;
+            }
+            
             String lower = fname;
             lower.toLowerCase();
-            int dot = lower.lastIndexOf('.');
-            
+            int8_t dot = lower.lastIndexOf('.');
+
             if (dot >= 0) {
                 String ext = lower.substring(dot + 1);
                 if (ext == "mp3" || ext == "wav") {
-                    audioFiles[fileCount] = fname;
-                    fileCount++;
-                    scanProgress++;
-                    
-                    Serial.printf("  [%d/%d] %s\n", scanProgress, scanTotal, fname.c_str());
-
-                    if (fileCount % 10 == 0) {
-                        uint32_t freeHeap = ESP.getFreeHeap();
-                        Serial.printf("    -> Files loaded: %d, Free Heap: %d bytes\n", fileCount, freeHeap);
-
-                        if (freeHeap < 10000) {
-                            Serial.println("WARNING: Low memory! Stopping file scan.");
-                            break;
-                        }
-                    }
-                    
-                    delay(5);
+                    if (fileCount < MAX_FILES) {
+                        audioFiles[fileCount++] = fname;
+                        scanProgress++;
+                    } else break;
                 }
             }
         }
-        file.close();
-        file = root.openNextFile();
+        
+        f.close();
+        f = root.openNextFile();
+        vTaskDelay(5 / portTICK_PERIOD_MS);
     }
     
     root.close();
-    isScanningFiles = false;
-    
-    if (fileCount >= MAX_FILES) {
-        Serial.printf("\n!!! WARNING: Reached MAX_FILES limit (%d) !!!\n", MAX_FILES);
-        Serial.println("!!! Some files were NOT loaded !!!");
-        Serial.println("!!! Consider increasing MAX_FILES in file_manager.h !!!\n");
-    }
-    
-    Serial.printf("=== Total audio files loaded: %d/%d ===\n", fileCount, MAX_FILES);
-    Serial.printf("Free Heap after listing: %d bytes\n", ESP.getFreeHeap());
-
-    if (ESP.getFreeHeap() < 20000) {
-        Serial.println("\n!!! CRITICAL: Low memory detected !!!");
-        Serial.println("!!! Device may become unstable !!!\n");
-    }
 }
 
-String getFileName(int index) {
-    if (index < 0 || index >= fileCount) return "";
+String getFileName(uint8_t index) {
+    if (index >= fileCount) return "";
     
     String fname = audioFiles[index];
-
-    int lastSlash = fname.lastIndexOf('/');
-    if (lastSlash >= 0) {
-        fname = fname.substring(lastSlash + 1);
-    }
+    int8_t lastSlash = fname.lastIndexOf('/');
+    if (lastSlash >= 0) fname = fname.substring(lastSlash + 1);
     
-    int lastDot = fname.lastIndexOf('.');
-    if (lastDot > 0) {
-        fname = fname.substring(0, lastDot);
-    }
+    int8_t lastDot = fname.lastIndexOf('.');
+    if (lastDot > 0) fname = fname.substring(0, lastDot);
     
     return fname;
 }

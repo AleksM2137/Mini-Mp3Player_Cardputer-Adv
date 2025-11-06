@@ -7,6 +7,5 @@ SD-Card is required
 ## Changes:
 - Some code improvements
 - Optimization
-- Now maximum songs per folder: 250
 - Folder selection
 - Support for previous *M5Stack Cardputer* generations has been removed.
