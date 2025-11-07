@@ -9,7 +9,7 @@ M5Canvas sprite2(&M5Cardputer.Display);
 M5Canvas overlaySprite(&M5Cardputer.Display);
 
 bool nextTrackRequest = false;
-
+const uint8_t VISIBLE_FILE_COUNT = 10;
 constexpr unsigned long HOLD_DELAY = 1500;
 constexpr int SCROLL_SPEED = 1;
 
@@ -27,6 +27,7 @@ static uint8_t volumeStep = 4;
 static uint8_t brightnessStep = 64;
 static uint8_t selectedFolderIndex = 0;
 static uint8_t selectedFileIndex = 0;
+static uint16_t viewStartIndex = 0;
 
 void initUI() {
     M5Cardputer.Display.setRotation(1);
@@ -173,7 +174,7 @@ void drawPlayer() {
         sprite1.fillRect(129, 8, 5, 122, 0x0841);
 
         if (fileCount > 0) {
-            sliderPos = map(currentFileIndex, 0, max(1, fileCount - 1), 8, 110);
+            sliderPos = map(selectedFileIndex, 0, max(1, fileCount - 1), 8, 110);
         } else {
             sliderPos = 8;
         }
@@ -258,15 +259,31 @@ void drawPlayer() {
             sprite1.setTextColor(RED, BLACK);
             sprite1.drawString("No files found!", 8, 50);
         } else {
-            int startIdx = max(0, currentFileIndex - 5);
+            if (fileCount <= VISIBLE_FILE_COUNT) {
+                viewStartIndex = 0;
+            } else if (viewStartIndex > fileCount - VISIBLE_FILE_COUNT) {
+                viewStartIndex = fileCount - VISIBLE_FILE_COUNT;
+            }
+            int startIdx = viewStartIndex;
             for (int i = 0; i < 10 && (startIdx + i) < fileCount; i++) {
                 int idx = startIdx + i;
-                if (idx == currentFileIndex) {
+                bool isNow = (idx == currentFileIndex);
+                bool isCursor = (idx == selectedFileIndex);
+
+                if (isNow) {
                     sprite1.setTextColor(WHITE, BLACK);
+                } else if (isCursor) {
+                    sprite1.setTextColor(YELLOW, BLACK);
                 } else {
                     sprite1.setTextColor(GREEN, BLACK);
                 }
-                sprite1.drawString(getFileName(idx).substring(0, 20), 8, 10 + (i * 12));
+
+                if (isCursor) {
+                    sprite1.drawString(">", 2, 10 + (i * 12));
+                    sprite1.drawString(getFileName(idx).substring(0, 20), 12, 10 + (i * 12));
+                } else {
+                    sprite1.drawString(getFileName(idx).substring(0, 20), 8, 10 + (i * 12));
+                }
             }
         }
 
@@ -366,6 +383,13 @@ void handleKeyPress(char key) {
                 scanDirectory(currentFolder);
                 currentFileIndex = 0;
                 currentUIState = UI_PLAYER;
+                selectedFileIndex = currentFileIndex;
+                if (selectedFileIndex >= fileCount) selectedFileIndex = 0;
+                if (fileCount <= VISIBLE_FILE_COUNT) {
+                    viewStartIndex = 0;
+                } else {
+                    viewStartIndex = max(0, (int)currentFileIndex - (VISIBLE_FILE_COUNT / 2));
+                }
                 isPlaying = true;
                 isStoped = false;
                 textPos = 90;
@@ -415,16 +439,16 @@ void handleKeyPress(char key) {
                 isStoped = false;
             }
         } else if (key == 'n' || key == '/' || key == 'p' || key == ',' || key == 'r' || key == '\n') {
-            if (key == 'n' || key == '/') {
-                currentFileIndex++;
-                if (currentFileIndex >= fileCount) currentFileIndex = 0;
+            if (fileCount == 0) {
+                return;
+            } else if (key == 'n' || key == '/') {
+                currentFileIndex = (currentFileIndex + 1) % fileCount;
             } else if (key == 'p' || key == ',') {
-                currentFileIndex--;
-                if (currentFileIndex < 0) currentFileIndex = fileCount - 1;
+                currentFileIndex = (currentFileIndex == 0) ? (fileCount - 1) : (currentFileIndex - 1);
             } else if (key == 'r') {
                 currentFileIndex = random(0, fileCount);
             } else if (key == '\n') {
-                currentFileIndex = selectedFileIndex;
+                if (selectedFileIndex < fileCount) currentFileIndex = selectedFileIndex;
             }
             trackStartMillis = millis();
             playbackTime = 0;
@@ -432,12 +456,24 @@ void handleKeyPress(char key) {
             isStoped = false;
             textPos = 90;
             nextTrackRequest = true;
-        } else if (key == ';') {
-            selectedFileIndex--;
-            if (selectedFileIndex < 0) selectedFileIndex = fileCount - 1;
-        } else if (key == '.') {
-            selectedFileIndex++;
-            if (selectedFileIndex >= fileCount) selectedFileIndex = 0;  
+        } else if (key == ';' || key == '.') {
+            if (fileCount > 0) {
+                if (key == ';') {
+                    selectedFileIndex = (selectedFileIndex == 0) ? (fileCount - 1) : (selectedFileIndex - 1);
+                } else {
+                    selectedFileIndex = (selectedFileIndex + 1) % fileCount;
+                }
+
+                if (fileCount <= VISIBLE_FILE_COUNT) {
+                    viewStartIndex = 0;
+                } else {
+                    if (selectedFileIndex < viewStartIndex) {
+                        viewStartIndex = selectedFileIndex;
+                    } else if (selectedFileIndex >= viewStartIndex + VISIBLE_FILE_COUNT) {
+                        viewStartIndex = selectedFileIndex - VISIBLE_FILE_COUNT + 1;
+                    }
+                }
+            }
         }
     }
 }
