@@ -13,13 +13,11 @@ const uint8_t VISIBLE_FILE_COUNT = 10;
 constexpr unsigned long HOLD_DELAY = 1500;
 constexpr int SCROLL_SPEED = 1;
 
-// === DODANE: Zmienne do wygaszania ekranu ===
-constexpr unsigned long SCREEN_DIM_TIMEOUT = 30000; // 30 sekund (możesz zmienić)
-constexpr uint8_t DIMMED_BRIGHTNESS = 16; // Jasność po wygaszeniu
+constexpr unsigned long SCREEN_DIM_TIMEOUT = 30000;
+constexpr uint8_t DIMMED_BRIGHTNESS = 16;
 unsigned long lastActivityTime = 0;
 uint8_t savedBrightness = 128;
-bool isScreenDimmed = false;
-// ============================================
+
 
 uint8_t sliderPos = 0;
 int16_t textPos = 90;
@@ -40,7 +38,7 @@ static uint16_t viewStartIndex = 0;
 void initUI() {
     M5Cardputer.Display.setRotation(1);
     M5Cardputer.Display.setBrightness(brightnessStep*2);
-    savedBrightness = brightnessStep*2; // Zapisz początkową jasność
+    savedBrightness = brightnessStep*2; 
     sprite1.createSprite(240, 135);
     sprite2.createSprite(86, 16);
 
@@ -50,24 +48,22 @@ void initUI() {
         co = co - 13;
     }
     
-    lastActivityTime = millis(); // Inicjalizuj czas aktywności
+    lastActivityTime = millis();
 }
 
-// === DODANE: Funkcja resetująca timer aktywności ===
+
 void resetActivityTimer() {
     lastActivityTime = millis();
     
-    // Jeśli ekran był wygaszony, przywróć jasność
+
     if (isScreenDimmed) {
         M5Cardputer.Display.setBrightness(savedBrightness);
         isScreenDimmed = false;
     }
 }
-// ==================================================
 
-// === DODANE: Funkcja sprawdzająca timeout i wygaszająca ekran ===
 void checkScreenTimeout() {
-    if (isScreenDimmed) return; // Już wygaszony
+    if (isScreenDimmed) return;
     
     unsigned long now = millis();
     if (now - lastActivityTime > SCREEN_DIM_TIMEOUT) {
@@ -76,7 +72,7 @@ void checkScreenTimeout() {
         isScreenDimmed = true;
     }
 }
-// ===============================================================
+
 
 String getPlaybackTimeString() {
     unsigned long elapsed = playbackTime;
@@ -381,7 +377,7 @@ void drawPlayer() {
 }
 
 void draw() {
-    checkScreenTimeout(); // Sprawdź czy wygasić ekran
+    checkScreenTimeout();
     
     if (currentUIState == UI_FOLDER_SELECT) {
         drawFolderSelect();
@@ -391,7 +387,7 @@ void draw() {
 }
 
 void handleKeyPress(char key) {
-    resetActivityTimer(); // Reset timera przy każdym naciśnięciu klawisza
+    resetActivityTimer();
     
     if (key == 'c') {
         changeVolume(-volumeStep);
